@@ -237,3 +237,72 @@ describe("the 12 built-in scenarios", () => {
     expect(actor(t, 1, "marcus").beliefs.practice_at_earlier_time).toBe(1);
   });
 });
+
+describe("The Missing Jacket (chronology and belief states)", () => {
+  const sc = scenarios.find((s) => s.id === "the-missing-jacket")!;
+  const t = trackBeliefs(getBeliefStory("the-missing-jacket")!);
+
+  it("steps run in time order: Morgan takes the jacket before Taylor looks for it", () => {
+    expect(sc.steps[0].text).toMatch(/Morgan takes a blue jacket/);
+    expect(sc.steps[1].text).toMatch(/Taylor cannot find/);
+  });
+
+  it("the world is consistent: the jacket is off the hook as soon as Morgan takes it", () => {
+    expect(at(t, 0).world).toMatchObject({ blue_jacket_on_hook: 1, morgan_took_blue_jacket: 0 });
+    expect(at(t, 1).world).toMatchObject({ blue_jacket_on_hook: 0, morgan_took_blue_jacket: 1 });
+  });
+
+  it("Taylor holds a false belief after step 1 (not present), corrected by looking in step 2", () => {
+    expect(actor(t, 1, "taylor")).toMatchObject({ access: "none" });
+    expect(actor(t, 1, "taylor").beliefs.blue_jacket_on_hook).toBe(1);
+    expect(at(t, 1).divergences).toContainEqual({ actorId: "taylor", proposition: "blue_jacket_on_hook", belief: 1, world: 0 });
+    expect(actor(t, 2, "taylor").beliefs.blue_jacket_on_hook).toBe(0);
+    // she still does not know where it is
+    expect(actor(t, 3, "taylor").beliefs.morgan_took_blue_jacket).toBe(0);
+  });
+
+  it("Morgan does not know whose jacket it is until reading the name tag in step 4", () => {
+    for (const n of [1, 2, 3]) expect(actor(t, n, "morgan").beliefs.jacket_is_taylors).toBe(0);
+    expect(actor(t, 4, "morgan").beliefs.jacket_is_taylors).toBe(1);
+    expect(actor(t, 1, "morgan").beliefs.morgan_took_blue_jacket).toBe(1);
+  });
+
+  it("after the return both are aligned with the world", () => {
+    expect(at(t, 5).world).toMatchObject({ taylor_has_jacket: 1, morgan_took_blue_jacket: 0 });
+    expect(at(t, 5).divergences).toEqual([]);
+  });
+});
+
+describe("The Borrowed Pen (chronology and belief states)", () => {
+  const sc = scenarios.find((s) => s.id === "the-borrowed-pen")!;
+  const t = trackBeliefs(getBeliefStory("the-borrowed-pen")!);
+
+  it("evening events are marked as such and in order", () => {
+    expect(sc.steps[2].text).toMatch(/^That evening, Lucia/);
+    expect(sc.steps[3].text).toMatch(/^Later that evening, Omar/);
+  });
+
+  it("Lucia knows she lent the pen, so the story no longer has her lose track of it", () => {
+    expect(actor(t, 1, "lucia").beliefs).toMatchObject({ pen_with_omar: 1, pen_with_lucia: 0 });
+    expect(actor(t, 3, "lucia").beliefs.pen_with_omar).toBe(1);
+    expect(sc.steps[2].text).toMatch(/remembers lending it/);
+  });
+
+  it("Omar does not register the pocket in step 2, and only learns it in step 4", () => {
+    expect(at(t, 2).world.pen_in_omars_pocket).toBe(1);
+    expect(actor(t, 2, "omar")).toMatchObject({ access: "none" });
+    expect(actor(t, 2, "omar").beliefs.pen_in_omars_pocket).toBe(0);
+    expect(at(t, 3).divergences).toContainEqual({ actorId: "omar", proposition: "pen_in_omars_pocket", belief: 0, world: 1 });
+    expect(actor(t, 4, "omar").beliefs.pen_in_omars_pocket).toBe(1);
+    expect(actor(t, 4, "omar").changedBeliefs).toEqual(["pen_in_omars_pocket"]);
+  });
+
+  it("Lucia never learns the pen is in the pocket until it comes back", () => {
+    for (const n of [2, 3, 4]) expect(actor(t, n, "lucia").beliefs.pen_in_omars_pocket).toBe(0);
+  });
+
+  it("returning the pen leaves the world and both beliefs consistent", () => {
+    expect(at(t, 5).world).toMatchObject({ pen_with_lucia: 1, pen_with_omar: 0, pen_in_omars_pocket: 0 });
+    expect(at(t, 5).divergences).toEqual([]);
+  });
+});

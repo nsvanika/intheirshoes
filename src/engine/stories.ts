@@ -132,21 +132,23 @@ export const beliefStories: BeliefStory[] = [
   }),
 
   build("the-missing-jacket", {
+    // Propositions are worded so each event only states what its observers could know:
+    // Morgan sees "a blue jacket" (not whose it is) until the name tag in step 4.
     propositions: {
-      jacket_on_hook: "Taylor's jacket is on its hook",
-      jacket_with_morgan: "Taylor's jacket is with Morgan",
-      jacket_with_taylor: "Taylor has the jacket back",
-      name_tag_is_taylors: "The name tag inside the jacket is Taylor's",
+      blue_jacket_on_hook: "A blue jacket is hanging on the hook",
+      morgan_took_blue_jacket: "Morgan took the blue jacket from the hook",
+      jacket_is_taylors: "The jacket Morgan took belongs to Taylor",
+      taylor_has_jacket: "Taylor has their jacket back",
     },
-    exclusiveGroups: [["jacket_on_hook", "jacket_with_morgan", "jacket_with_taylor"]],
-    initialWorld: ["jacket_on_hook", "name_tag_is_taylors"],
-    initialBeliefs: { taylor: ["jacket_on_hook"] },
+    exclusiveGroups: [["blue_jacket_on_hook", "morgan_took_blue_jacket", "taylor_has_jacket"]],
+    initialWorld: ["blue_jacket_on_hook", "jacket_is_taylors"],
+    initialBeliefs: { taylor: ["blue_jacket_on_hook"] },
     events: [
-      act({ jacket_on_hook: false }, ["taylor"]),
+      act({ morgan_took_blue_jacket: true }, ["morgan"]), // Taylor is not there: her belief stays
+      act({ blue_jacket_on_hook: false }, ["taylor"]),
       quiet(),
-      act({ jacket_with_morgan: true }, ["morgan"]),
-      act({ name_tag_is_taylors: true }, ["morgan"]),
-      act({ jacket_with_taylor: true }, ["morgan", "taylor"]),
+      act({ jacket_is_taylors: true }, ["morgan"]), // reads the name tag
+      act({ taylor_has_jacket: true, jacket_is_taylors: true }, ["morgan", "taylor"]), // Morgan explains the mix-up
     ],
   }),
 
@@ -193,18 +195,16 @@ export const beliefStories: BeliefStory[] = [
       pen_with_lucia: "The pen is with Lucia",
       pen_with_omar: "The pen is with Omar",
       pen_in_omars_pocket: "The pen is in Omar's pocket",
-      pen_missing_at_home: "Lucia cannot find the pen at home",
-      pen_found_in_jeans: "Omar found the pen in his jeans",
     },
     exclusiveGroups: [["pen_with_lucia", "pen_with_omar"]],
     initialWorld: ["pen_with_lucia"],
     initialBeliefs: { lucia: ["pen_with_lucia"], omar: ["pen_with_lucia"] },
     events: [
       act({ pen_with_omar: true }, ["lucia", "omar"]),
-      act({ pen_in_omars_pocket: true }, ["omar"]),
-      act({ pen_missing_at_home: true }, ["lucia"]),
-      act({ pen_found_in_jeans: true }, ["omar"]),
-      act({ pen_with_lucia: true }, ["omar", "lucia"]),
+      act({ pen_in_omars_pocket: true }, []), // "without thinking": Omar does not register it
+      quiet(), // Lucia remembers and wonders; nothing observable changes
+      act({ pen_in_omars_pocket: true }, ["omar"]), // finds it: his first awareness of the pocket
+      act({ pen_with_lucia: true, pen_in_omars_pocket: false }, ["omar", "lucia"]),
     ],
   }),
 

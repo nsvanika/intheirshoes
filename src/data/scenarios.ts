@@ -97,9 +97,9 @@ export const scenarios: Scenario[] = [
       { id: "morgan", name: "Morgan", role: "Teammate who took a matching jacket" },
     ],
     steps: [
-      { characterId: "taylor", text: "After gym class, Taylor cannot find their blue jacket on the usual hook." },
+      { characterId: "morgan", text: "After gym class, Morgan takes a blue jacket from a hook on the way out because it looks just like their own." },
+      { characterId: "taylor", text: "A little later, Taylor cannot find their blue jacket on the usual hook." },
       { characterId: "taylor", text: "Taylor feels worried and starts to suspect that someone took it." },
-      { characterId: "morgan", text: "Morgan grabs a blue jacket on the way out because it looks just like their own." },
       { characterId: "morgan", text: "At home, Morgan sees a different name tag inside the collar and realizes it is not theirs." },
       { characterId: "morgan", text: "The next morning, Morgan returns the jacket to Taylor and explains the mix-up." },
     ],
@@ -151,8 +151,8 @@ export const scenarios: Scenario[] = [
     steps: [
       { characterId: "omar", text: "Omar forgets a pen, so Lucia lends him her favorite one during a quiz." },
       { characterId: "omar", text: "When the bell rings, Omar slips the pen into his pocket without thinking." },
-      { characterId: "lucia", text: "Lucia looks for her pen at home and cannot find it, which makes her feel anxious." },
-      { characterId: "omar", text: "That evening, Omar finds the pen in his jeans and remembers whose it is." },
+      { characterId: "lucia", text: "That evening, Lucia reaches for her favorite pen, remembers lending it to Omar, and wonders whether he still has it." },
+      { characterId: "omar", text: "Later that evening, Omar finds the pen in his jeans and remembers whose it is." },
       { characterId: "omar", text: "The next day, Omar returns it and says sorry for the confusion." },
     ],
   },
