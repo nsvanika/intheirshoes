@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# keep the committed template
+!.env.example
+
+# research paper stays local
+/docs/*.pdf
