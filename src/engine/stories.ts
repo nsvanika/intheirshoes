@@ -109,10 +109,11 @@ export const beliefStories: BeliefStory[] = [
     initialBeliefs: { riley: ["seat_free"] },
     events: [
       act({ bag_on_chair: true }, ["riley"]),
-      act({ bag_on_chair: true }, ["riley", "priya"]),
-      quiet(),
+      act({ bag_on_chair: true }, ["riley", "priya"]), // Riley is at the table when Priya arrives
+      quiet(), // Priya cannot tell: she believes neither "free" nor "saved"
       say("priya", {}, ["riley"]), // a question asserts nothing
       say("riley", { seat_free: true }, ["priya"]),
+      act({ bag_on_chair: false }, ["riley", "priya"]),
     ],
   }),
 
@@ -165,8 +166,9 @@ export const beliefStories: BeliefStory[] = [
     events: [
       act({ joke_told: true }, ["eli", "noor", "kai"]),
       act({ kai_laughed: true }, ["eli", "noor", "kai"]),
-      act({ noor_felt_hurt: true }, ["noor"]),
-      act({ noor_quiet: true }, ["eli", "noor", "kai"]),
+      act({ noor_felt_hurt: true, noor_quiet: true }, ["noor"]), // Noor's own reaction, privately felt
+      act({ noor_quiet: true }, ["eli", "noor", "kai"]), // everyone can see Noor has stopped laughing
+      say("noor", { noor_felt_hurt: true }, ["eli"]), // Eli learns how it felt only because Noor says so
       say("eli", { eli_meant_no_harm: true }, ["noor"]),
     ],
   }),
@@ -209,35 +211,54 @@ export const beliefStories: BeliefStory[] = [
   }),
 
   build("the-different-weekend-plans", {
+    // Neither friend learns the other's plan until it is said. Seeing how Devon is dressed or
+    // what is set out is observed, but it is not treated as learning the plan (an inference).
     propositions: {
       devon_wants_plans: "Devon wants to do something this weekend",
-      zoe_agreed: "Zoe agreed to do something",
+      zoe_open_to_plans: "Zoe is open to doing something this weekend",
       devon_plans_arcade: "Devon is planning to go to the arcade",
       zoe_plans_movie_home: "Zoe is planning a movie at home",
+      devon_dressed_for_arcade: "Devon arrived dressed for the arcade with money for tokens",
+      snacks_set_out: "Snacks and blankets are set out for a movie",
     },
-    initialWorld: ["devon_wants_plans", "zoe_agreed", "devon_plans_arcade", "zoe_plans_movie_home"],
-    initialBeliefs: { devon: ["devon_plans_arcade"], zoe: ["zoe_plans_movie_home"] },
+    initialWorld: [
+      "devon_wants_plans",
+      "zoe_open_to_plans",
+      "devon_plans_arcade",
+      "zoe_plans_movie_home",
+      "snacks_set_out",
+    ],
+    initialBeliefs: {
+      devon: ["devon_plans_arcade", "devon_wants_plans"],
+      zoe: ["zoe_plans_movie_home", "snacks_set_out", "zoe_open_to_plans"],
+    },
     events: [
       say("devon", { devon_wants_plans: true }, ["zoe"]),
-      say("zoe", { zoe_agreed: true }, ["devon"]),
-      act({ devon_plans_arcade: true }, ["devon", "zoe"]), // Devon turns up ready for the arcade
-      quiet(),
+      say("zoe", { zoe_open_to_plans: true }, ["devon"]),
+      act({ devon_dressed_for_arcade: true }, ["devon", "zoe"]),
+      act({ snacks_set_out: true }, ["zoe", "devon"]),
+      say("devon", { devon_plans_arcade: true }, ["zoe"]),
       say("zoe", { zoe_plans_movie_home: true }, ["devon"]),
     ],
   }),
 
   build("the-group-project-handoff", {
+    // Only things that were said or seen are tracked. What Isaac makes of Mei's comment is his
+    // interpretation: the paper has no rule for inferences, so it is not a belief update here.
     propositions: {
       slides_owner_unassigned: "No one has been named to make the slides",
       report_done: "The written report is finished",
-      mei_likes_design: "Mei likes design",
+      mei_likes_design: "Mei likes working on design",
       slides_not_started: "No one has started the slides",
     },
+    initialWorld: ["mei_likes_design"],
+    initialBeliefs: { mei: ["mei_likes_design"] },
     events: [
       act({ slides_owner_unassigned: true }, ["harper", "isaac", "mei"]),
       act({ report_done: true }, ["harper"]),
-      act({ mei_likes_design: true }, ["isaac", "mei"]),
-      quiet(),
+      say("mei", { mei_likes_design: true }, ["isaac"]),
+      quiet(), // Isaac's interpretation
+      quiet(), // Mei's intention
       act({ slides_not_started: true }, ["harper", "isaac", "mei"]),
     ],
   }),
@@ -251,9 +272,9 @@ export const beliefStories: BeliefStory[] = [
     events: [
       act({ amara_waved: true }, ["amara"]), // Theo does not notice
       act({ theo_thinking_about_test: true }, ["theo"]),
-      quiet(),
+      quiet(), // Amara wonders; she has no evidence either way
       act({ theo_said_hello: true }, ["theo", "amara"]),
-      quiet(),
+      say("theo", { theo_thinking_about_test: true }, ["amara"]), // Amara learns the reason only now
     ],
   }),
 
@@ -285,7 +306,7 @@ export const beliefStories: BeliefStory[] = [
     propositions: {
       sub_today: "A substitute teacher is teaching today",
       schedule_differs: "Today's schedule differs from the usual one",
-      jules_looks_unsettled: "Jules looks unsettled",
+      jules_looks_unsure: "Jules looks unsure",
       plan_posted: "The plan for today has been shared with Jules",
     },
     initialWorld: ["sub_today", "schedule_differs"],
@@ -294,7 +315,7 @@ export const beliefStories: BeliefStory[] = [
       act({ sub_today: true }, ["jules", "mr-patel", "ren"]),
       say("mr-patel", { schedule_differs: true }, ["jules", "ren"]),
       quiet(),
-      act({ jules_looks_unsettled: true }, ["ren"]),
+      act({ jules_looks_unsure: true }, ["ren"]),
       act({ plan_posted: true }, ["ren", "jules"]),
     ],
   }),
