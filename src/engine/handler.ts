@@ -9,7 +9,10 @@ import { trackBeliefs } from "./engine";
 import { allowRequest } from "./rate-limit";
 import { BeliefStorySchema, BeliefTableSchema } from "./schema";
 import { getBeliefStory } from "./stories";
+import { ChoiceIdSchema } from "./prediction-schema";
+import { buildReveal, promptAfterStep } from "./prediction";
 import { buildStepView, StepViewSchema } from "./view";
+import { getPredictionQuestion } from "@/data/predictions";
 import { scenarios } from "@/data/scenarios";
 
 const MAX_BODY_BYTES = 100_000;
@@ -19,6 +22,12 @@ const MAX_BODY_BYTES = 100_000;
  * (returns the student view of just that step), or a full structured story.
  */
 const RequestSchema = z.union([
+  // A student's prediction for the question asked after `step`. Returns the reveal.
+  z.strictObject({
+    scenarioId: z.string().max(64),
+    step: z.number().int().min(1).max(50),
+    answer: ChoiceIdSchema,
+  }),
   z.strictObject({ scenarioId: z.string().max(64), step: z.number().int().min(1).max(50) }),
   z.strictObject({ scenarioId: z.string().max(64) }),
   z.strictObject({ story: BeliefStorySchema }),
@@ -72,14 +81,25 @@ export async function handleBeliefRequest(request: Request, env: HandlerEnv): Pr
     );
   }
 
-  // Student step views: deterministic engine only, never a paid call, and only steps 1..n.
+  // Student step views and prediction reveals: deterministic engine only, never a paid call.
   if ("step" in parsed.data) {
     const { scenarioId, step } = parsed.data;
     const found = getBeliefStory(scenarioId);
     const scenario = scenarios.find((sc) => sc.id === scenarioId);
     if (!found || !scenario) return json({ error: "Unknown scenario." }, 404);
     if (step > found.events.length) return json({ error: "Step out of range." }, 400);
-    const view = buildStepView(found, trackBeliefs(found), scenario, step);
+    const table = trackBeliefs(found);
+
+    if ("answer" in parsed.data) {
+      const question = getPredictionQuestion(scenarioId, step);
+      if (!question || step >= found.events.length) {
+        return json({ error: "There is no question at this step." }, 400);
+      }
+      return json(buildReveal(question, found, table, scenario, parsed.data.answer));
+    }
+
+    // Only the prompt rides along with the step; answers are sent only after a submission.
+    const view = buildStepView(found, table, scenario, step, promptAfterStep(scenarioId, step, found));
     return json(StepViewSchema.parse(view));
   }
 

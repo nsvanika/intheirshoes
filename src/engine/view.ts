@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Scenario } from "@/data/scenarios";
+import { PredictionPromptSchema, type PredictionPrompt } from "./prediction-schema";
 import type { BeliefStory, BeliefTable } from "./schema";
 
 /**
@@ -62,6 +63,11 @@ export const StepViewSchema = z.strictObject({
   earlierSteps: z.array(z.strictObject({ number: z.number().int().min(1), text: Text })),
   truths: z.array(ViewItemSchema),
   characters: z.array(CharacterViewSchema),
+  /**
+   * The question to ask when the student presses Next Step from this step, or null.
+   * Prompt and neutral choices only: never the answer, explanation, or what happens next.
+   */
+  prediction: PredictionPromptSchema.nullable(),
 });
 
 export type StepView = z.infer<typeof StepViewSchema>;
@@ -106,6 +112,7 @@ export function buildStepView(
   table: BeliefTable,
   scenario: Scenario,
   n: number,
+  prediction: PredictionPrompt | null = null,
 ): StepView {
   const total = story.events.length;
   if (!Number.isInteger(n) || n < 1 || n > total) {
@@ -170,5 +177,6 @@ export function buildStepView(
     earlierSteps: scenario.steps.slice(0, n - 1).map((s, i) => ({ number: i + 1, text: s.text })),
     truths,
     characters,
+    prediction,
   });
 }

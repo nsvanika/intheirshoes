@@ -2,6 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import PredictionCard from "@/components/PredictionCard";
+import {
+  PredictionRevealSchema,
+  type ChoiceId,
+  type PredictionReveal,
+} from "@/engine/prediction-schema";
 import { StepViewSchema, type StepView } from "@/engine/view";
 
 /**
@@ -9,6 +15,10 @@ import { StepViewSchema, type StepView } from "@/engine/view";
  * the right lens shows what each character believes. Both come from the belief engine
  * through POST /api/belief-tracking, one step at a time. The next step is requested only
  * when the student presses Next Step, so later events never reach the browser early.
+ *
+ * Predict, Then Reveal: on a step that has a question, Next Step first pauses and asks it.
+ * The step data holds only the question and three neutral choices; the answer, explanation
+ * and next event are fetched from the server only after the student submits a prediction.
  */
 
 const PARTICIPATION_LABEL: Record<StepView["characters"][number]["participation"], string> = {
@@ -196,15 +206,59 @@ export default function ScenarioLens({
   const [current, setCurrent] = useState(initialView.stepNumber);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Predict, Then Reveal state
+  const [answers, setAnswers] = useState<Record<string, PredictionReveal>>({});
+  const [asking, setAsking] = useState(false);
+  const [nudge, setNudge] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [predictionError, setPredictionError] = useState<string | null>(null);
 
   const view = views[current];
   const total = initialView.totalSteps;
   const atEnd = current >= total;
+  const question = view.prediction;
+  const reveal = question ? (answers[question.id] ?? null) : null;
+  // Show the card while a question is being asked, and keep showing the review for answered ones.
+  const showPrediction = question !== null && (asking || reveal !== null);
 
-  async function goNext() {
+  function goNext() {
+    if (atEnd || loading) return;
+    // Pause for the question before showing the next step.
+    if (question && !answers[question.id]) {
+      setNudge(asking); // already open? gently remind the student to answer first
+      setAsking(true);
+      return;
+    }
+    void advance();
+  }
+
+  async function submitPrediction(choice: ChoiceId) {
+    if (!question || submitting) return;
+    setSubmitting(true);
+    setPredictionError(null);
+    try {
+      const res = await fetch("/api/belief-tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenarioId, step: current, answer: choice }),
+      });
+      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      const parsed = PredictionRevealSchema.parse(await res.json());
+      setAnswers((a) => ({ ...a, [question.id]: parsed }));
+      setNudge(false);
+    } catch {
+      setPredictionError("We couldn't check that just now. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function advance() {
     if (atEnd || loading) return;
     const next = current + 1;
     setError(null);
+    setAsking(false);
+    setNudge(false);
     if (views[next]) {
       setCurrent(next);
       return;
@@ -230,6 +284,9 @@ export default function ScenarioLens({
   function goPrevious() {
     if (current > 1 && !loading) {
       setError(null);
+      setAsking(false);
+      setNudge(false);
+      setPredictionError(null);
       setCurrent(current - 1);
     }
   }
@@ -315,6 +372,21 @@ export default function ScenarioLens({
           </p>
         )}
 
+        {showPrediction && question && (
+          <PredictionCard
+            key={question.id}
+            prompt={question}
+            reveal={reveal}
+            submitting={submitting}
+            error={predictionError}
+            nudge={nudge}
+            focusOnMount={asking}
+            onSubmit={submitPrediction}
+            onContinue={() => void advance()}
+            canContinue={!atEnd && !loading}
+          />
+        )}
+
         <div className="mt-6 grid gap-6 md:grid-cols-2 md:items-start">
           <section
             aria-labelledby="truth-heading"
@@ -372,6 +444,10 @@ export default function ScenarioLens({
               type="button"
               onClick={() => {
                 setError(null);
+                setAsking(false);
+                setNudge(false);
+                setPredictionError(null);
+                setAnswers({}); // start fresh, including the predictions
                 setCurrent(1);
               }}
               className={`${btn} border border-slate-400 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700`}

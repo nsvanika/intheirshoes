@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import ScenarioLens from "@/components/ScenarioLens";
 import { scenarios } from "@/data/scenarios";
 import { trackBeliefs } from "@/engine/engine";
+import { promptAfterStep } from "@/engine/prediction";
 import { getBeliefStory } from "@/engine/stories";
 import { buildStepView } from "@/engine/view";
 
@@ -27,7 +28,13 @@ export default async function ScenarioPage(props: PageProps<"/scenarios/[id]">) 
 
   // Only step 1 is rendered on the server; later steps are requested one at a time
   // from /api/belief-tracking when the student presses Next Step.
-  const initialView = buildStepView(story, trackBeliefs(story), scenario, 1);
+  const initialView = buildStepView(
+    story,
+    trackBeliefs(story),
+    scenario,
+    1,
+    promptAfterStep(scenario.id, 1, story),
+  );
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
