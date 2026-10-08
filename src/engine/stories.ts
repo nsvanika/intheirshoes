@@ -43,6 +43,8 @@ const flags = (f: Flags) => Object.entries(f).map(([proposition, value]) => ({ p
 
 interface Def {
   propositions: Record<string, string>;
+  /** Show a fact from this step, where the step text first states it (display only). */
+  revealAt?: Record<string, number>;
   exclusiveGroups?: string[][];
   initialWorld?: string[];
   initialBeliefs?: Record<string, string[]>;
@@ -62,6 +64,7 @@ function build(scenarioId: string, def: Def): BeliefStory {
     exclusiveGroups: def.exclusiveGroups ?? [],
     initialWorld: def.initialWorld ?? [],
     initialBeliefs: def.initialBeliefs ?? {},
+    revealAt: def.revealAt ?? {},
     events: def.events.map((spec, i) => {
       const base = { id: `e${i + 1}`, t: i + 1, description: scenario.steps[i].text };
       return spec.kind === "action"
@@ -138,18 +141,18 @@ export const beliefStories: BeliefStory[] = [
     propositions: {
       blue_jacket_on_hook: "A blue jacket is hanging on the hook",
       morgan_took_blue_jacket: "Morgan took the blue jacket from the hook",
-      jacket_is_taylors: "The jacket Morgan took belongs to Taylor",
+      jacket_not_morgans: "The jacket Morgan took is not Morgan's",
       taylor_has_jacket: "Taylor has their jacket back",
     },
     exclusiveGroups: [["blue_jacket_on_hook", "morgan_took_blue_jacket", "taylor_has_jacket"]],
-    initialWorld: ["blue_jacket_on_hook", "jacket_is_taylors"],
+    initialWorld: ["blue_jacket_on_hook", "jacket_not_morgans"],
     initialBeliefs: { taylor: ["blue_jacket_on_hook"] },
     events: [
       act({ morgan_took_blue_jacket: true }, ["morgan"]), // Taylor is not there: her belief stays
       act({ blue_jacket_on_hook: false }, ["taylor"]),
       quiet(),
-      act({ jacket_is_taylors: true }, ["morgan"]), // reads the name tag
-      act({ taylor_has_jacket: true, jacket_is_taylors: true }, ["morgan", "taylor"]), // Morgan explains the mix-up
+      act({ jacket_not_morgans: true }, ["morgan"]), // reads the name tag
+      act({ taylor_has_jacket: true }, ["morgan", "taylor"]),
     ],
   }),
 
@@ -221,6 +224,9 @@ export const beliefStories: BeliefStory[] = [
       devon_dressed_for_arcade: "Devon arrived dressed for the arcade with money for tokens",
       snacks_set_out: "Snacks and blankets are set out for a movie",
     },
+    // The step text names each private plan as it is introduced (steps 1 and 2), so a student
+    // may see it then, even though no event changes it until it is told (steps 5 and 6).
+    revealAt: { devon_plans_arcade: 1, zoe_plans_movie_home: 2 },
     initialWorld: [
       "devon_wants_plans",
       "zoe_open_to_plans",
@@ -266,7 +272,7 @@ export const beliefStories: BeliefStory[] = [
   build("the-new-student-hello", {
     propositions: {
       amara_waved: "Amara waved in the hallway",
-      theo_thinking_about_test: "Theo is thinking about a test",
+      theo_thinking_about_test: "Theo had a test on their mind in the hall",
       theo_said_hello: "Theo said hello at lunch",
     },
     events: [

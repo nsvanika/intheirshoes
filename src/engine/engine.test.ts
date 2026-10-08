@@ -261,15 +261,17 @@ describe("The Missing Jacket (chronology and belief states)", () => {
     expect(actor(t, 3, "taylor").beliefs.morgan_took_blue_jacket).toBe(0);
   });
 
-  it("Morgan does not know whose jacket it is until reading the name tag in step 4", () => {
-    for (const n of [1, 2, 3]) expect(actor(t, n, "morgan").beliefs.jacket_is_taylors).toBe(0);
-    expect(actor(t, 4, "morgan").beliefs.jacket_is_taylors).toBe(1);
+  it("Morgan does not know the jacket is not his until reading the name tag in step 4", () => {
+    for (const n of [1, 2, 3]) expect(actor(t, n, "morgan").beliefs.jacket_not_morgans).toBe(0);
+    expect(actor(t, 4, "morgan").beliefs.jacket_not_morgans).toBe(1);
     expect(actor(t, 1, "morgan").beliefs.morgan_took_blue_jacket).toBe(1);
   });
 
-  it("after the return both are aligned with the world", () => {
+  it("after the return nobody holds a false belief; Taylor simply never saw the name tag", () => {
     expect(at(t, 5).world).toMatchObject({ taylor_has_jacket: 1, morgan_took_blue_jacket: 0 });
-    expect(at(t, 5).divergences).toEqual([]);
+    expect(at(t, 5).divergences).toEqual([
+      { actorId: "taylor", proposition: "jacket_not_morgans", belief: 0, world: 1 },
+    ]);
   });
 });
 

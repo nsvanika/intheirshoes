@@ -37,8 +37,28 @@ body {
   }
 }
 
+/* Gentle fade when a new story step appears. */
+@keyframes lens-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lens-fade {
+  animation: lens-fade 320ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+  }
+
+  .lens-fade {
+    animation: none;
   }
 }

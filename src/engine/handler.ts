@@ -9,11 +9,17 @@ import { trackBeliefs } from "./engine";
 import { allowRequest } from "./rate-limit";
 import { BeliefStorySchema, BeliefTableSchema } from "./schema";
 import { getBeliefStory } from "./stories";
+import { buildStepView, StepViewSchema } from "./view";
+import { scenarios } from "@/data/scenarios";
 
 const MAX_BODY_BYTES = 100_000;
 
-/** Either a built-in scenario id, or a full structured story. */
+/**
+ * Either a built-in scenario id, a built-in scenario id plus a 1-based `step`
+ * (returns the student view of just that step), or a full structured story.
+ */
 const RequestSchema = z.union([
+  z.strictObject({ scenarioId: z.string().max(64), step: z.number().int().min(1).max(50) }),
   z.strictObject({ scenarioId: z.string().max(64) }),
   z.strictObject({ story: BeliefStorySchema }),
 ]);
@@ -64,6 +70,17 @@ export async function handleBeliefRequest(request: Request, env: HandlerEnv): Pr
       },
       400,
     );
+  }
+
+  // Student step views: deterministic engine only, never a paid call, and only steps 1..n.
+  if ("step" in parsed.data) {
+    const { scenarioId, step } = parsed.data;
+    const found = getBeliefStory(scenarioId);
+    const scenario = scenarios.find((sc) => sc.id === scenarioId);
+    if (!found || !scenario) return json({ error: "Unknown scenario." }, 404);
+    if (step > found.events.length) return json({ error: "Step out of range." }, 400);
+    const view = buildStepView(found, trackBeliefs(found), scenario, step);
+    return json(StepViewSchema.parse(view));
   }
 
   let story;

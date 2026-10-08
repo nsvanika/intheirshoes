@@ -118,7 +118,7 @@ export const scenarios: Scenario[] = [
     steps: [
       { characterId: "eli", text: "Eli jokes that Noor always takes forever to finish group projects." },
       { characterId: "kai", text: "Kai laughs at the joke." },
-      { characterId: "noor", text: "Noor stops laughing and goes quiet, because they have been working hard on the project." },
+      { characterId: "noor", text: "Noor stops laughing and goes quiet, feeling hurt because they have been working hard on the project." },
       { characterId: "eli", text: "Eli notices that Noor has stopped laughing and feels confused." },
       { characterId: "noor", text: "Later, Eli asks Noor how the joke felt, and Noor says it hurt because they have worked hard on the project." },
       { characterId: "eli", text: "Eli says they did not mean to hurt anyone." },

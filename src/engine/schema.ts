@@ -67,6 +67,12 @@ export const BeliefStorySchema = z
     initialWorld: z.array(Id).max(50).default([]),
     /** Propositions each actor believes before the first event. Others are 0 (Eq. 1). */
     initialBeliefs: z.record(Id, z.array(Id).max(50)).default({}),
+    /**
+     * Display only; the engine ignores it. Maps a proposition to the step from which a student
+     * view may show it, for facts the story text states before any event changes them (e.g. a
+     * private plan mentioned in step 1). Must not be later than the first event that touches it.
+     */
+    revealAt: z.record(Id, z.number().int().min(1).max(1000)).default({}),
     events: z.array(StoryEventSchema).min(1).max(20),
   })
   .superRefine((story, ctx) => {
@@ -113,6 +119,21 @@ export const BeliefStorySchema = z
       needActor(actor, ["initialBeliefs", actor]);
       props.forEach((p, i) => needProp(p, ["initialBeliefs", actor, i]));
       checkExclusive(props, `initialBeliefs.${actor}`, ["initialBeliefs", actor]);
+    }
+
+    const firstTouch = new Map<string, number>();
+    story.events.forEach((e, i) => {
+      for (const x of e.type === "action" ? e.effects : e.assertions) {
+        if (!firstTouch.has(x.proposition)) firstTouch.set(x.proposition, i + 1);
+      }
+    });
+    for (const [p, step] of Object.entries(story.revealAt)) {
+      needProp(p, ["revealAt", p]);
+      if (step > story.events.length) fail(`revealAt step ${step} is past the last event`, ["revealAt", p]);
+      const touched = firstTouch.get(p);
+      if (touched !== undefined && step > touched) {
+        fail(`revealAt step ${step} is later than the first event that touches "${p}" (step ${touched})`, ["revealAt", p]);
+      }
     }
 
     const eventIds = new Set<string>();
