@@ -45,7 +45,7 @@ export default async function ScenarioPage(props: PageProps<"/scenarios/[id]">) 
         &larr; All scenarios
       </Link>
       <h1 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">{scenario.title}</h1>
-      <ScenarioLens scenarioId={scenario.id} initialView={initialView} />
+      <ScenarioLens scenarioId={scenario.id} initialView={initialView} persist />
     </main>
   );
 }

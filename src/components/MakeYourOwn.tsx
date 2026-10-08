@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import ReadAloud from "@/components/ReadAloud";
 import ScenarioLens from "@/components/ScenarioLens";
+import { describeReview } from "@/lib/speech-text";
 import {
   CustomConfigSchema,
   CustomResponseSchema,
@@ -355,6 +357,10 @@ export default function MakeYourOwn() {
             Each step comes from your own words, shown beside it. If something looks off, edit your
             description and generate again.
           </p>
+
+          <div className="mt-3">
+            <ReadAloud text={describeReview(ready.review)} what="what we understood" />
+          </div>
 
           <p className="mt-4 text-lg">
             <span className="font-semibold">People:</span> {ready.review.characters.map((c) => c.name).join(", ")}

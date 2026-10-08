@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PredictionCard from "@/components/PredictionCard";
 import {
   PredictionRevealSchema,
@@ -9,6 +9,14 @@ import {
   type PredictionReveal,
 } from "@/engine/prediction-schema";
 import { StepViewSchema, type StepView } from "@/engine/view";
+import ReadAloud from "@/components/ReadAloud";
+import {
+  PROGRESS_CLEARED_EVENT,
+  getScenarioProgress,
+  removeScenarioProgress,
+  saveScenarioProgress,
+} from "@/lib/progress";
+import { describeStepView } from "@/lib/speech-text";
 
 /**
  * The Two-Lens View. The left lens shows what is actually true at the current step;
@@ -30,7 +38,7 @@ const PARTICIPATION_LABEL: Record<StepView["characters"][number]["participation"
 };
 
 const TAG =
-  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium max-w-full";
 
 function NewTag() {
   return (
@@ -68,13 +76,13 @@ function Legend() {
       aria-label="What the labels mean"
       className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-700 dark:text-slate-300"
     >
-      <li className="flex items-center gap-2">
+      <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <MatchTag /> <span>Their belief is true right now</span>
       </li>
-      <li className="flex items-center gap-2">
+      <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <DiffTag /> <span>Their belief is not true right now</span>
       </li>
-      <li className="flex items-center gap-2">
+      <li className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span
           className={`${TAG} border-sky-600 bg-sky-50 text-sky-950 dark:border-sky-400 dark:bg-sky-950 dark:text-sky-50`}
         >
@@ -122,6 +130,7 @@ function CharacterPanel({ character }: { character: StepView["characters"][numbe
             {character.believes.map((b) => (
               <li
                 key={b.id}
+                data-status={b.status}
                 className={`rounded-lg border p-3 ${
                   b.status === "differs"
                     ? "border-amber-400 bg-amber-50/70 dark:border-amber-500 dark:bg-amber-950/50"
@@ -173,6 +182,7 @@ function CharacterPanel({ character }: { character: StepView["characters"][numbe
             {character.notKnown.map((k) => (
               <li
                 key={k.id}
+                data-status="unknown"
                 className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 dark:border-sky-700 dark:bg-sky-950/40"
               >
                 <p>
@@ -198,6 +208,7 @@ export default function ScenarioLens({
   initialView,
   preloadedViews,
   endAction,
+  persist = false,
 }: {
   scenarioId: string;
   initialView: StepView;
@@ -208,6 +219,12 @@ export default function ScenarioLens({
   preloadedViews?: StepView[];
   /** Replaces the "Choose another scenario" link in the end-of-story card. */
   endAction?: { label: string; onClick: () => void };
+  /**
+   * Remember the student's place in this browser (localStorage): the step, and which prediction
+   * questions they answered and with which choice. Built-in scenarios only; "Make Your Own"
+   * stories are never saved. Nothing the student typed or any story text is ever stored.
+   */
+  persist?: boolean;
 }) {
   const [views, setViews] = useState<Record<number, StepView>>(
     preloadedViews
@@ -219,18 +236,125 @@ export default function ScenarioLens({
   const [error, setError] = useState<string | null>(null);
   // Predict, Then Reveal state
   const [answers, setAnswers] = useState<Record<string, PredictionReveal>>({});
+  /** The choice picked for each answered question. This (ids only) is what gets saved. */
+  const [choices, setChoices] = useState<Record<string, ChoiceId>>({});
   const [asking, setAsking] = useState(false);
   const [nudge, setNudge] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [predictionError, setPredictionError] = useState<string | null>(null);
+  // Saved-progress state. The server and the first browser render are always the same (step 1);
+  // the saved place is read only after the page has loaded, so there is no hydration mismatch.
+  const [restoring, setRestoring] = useState(false);
+  const [ready, setReady] = useState(!persist);
+  /** Nothing is saved until the student actually does something, so a failed restore never wipes a saved place. */
+  const [touched, setTouched] = useState(false);
+  const restoreStarted = useRef(false);
 
   const view = views[current];
   const total = initialView.totalSteps;
   const atEnd = current >= total;
   const question = view.prediction;
+  const questionId = question?.id ?? null;
   const reveal = question ? (answers[question.id] ?? null) : null;
   // Show the card while a question is being asked, and keep showing the review for answered ones.
   const showPrediction = question !== null && (asking || reveal !== null);
+
+  async function post<T>(body: Record<string, unknown>, parse: (data: unknown) => T): Promise<T> {
+    const res = await fetch("/api/belief-tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scenarioId, ...body }),
+    });
+    if (!res.ok) throw new Error(`Request failed (${res.status})`);
+    return parse(await res.json());
+  }
+
+  /** Gets a step the student is allowed to see (never a later one than they ask for). */
+  async function loadView(n: number): Promise<StepView> {
+    if (views[n]) return views[n];
+    const parsed = await post({ step: n }, (d) => StepViewSchema.parse(d));
+    setViews((v) => ({ ...v, [n]: parsed }));
+    return parsed;
+  }
+
+  // Restore the saved place once, after the page has loaded.
+  useEffect(() => {
+    if (!persist || restoreStarted.current) return;
+    restoreStarted.current = true;
+    const saved = getScenarioProgress(scenarioId);
+    const usable = saved && saved.total === initialView.totalSteps ? saved : null;
+    queueMicrotask(() => {
+      if (!usable) {
+        setReady(true);
+        return;
+      }
+      setChoices(usable.answers);
+      if (usable.step === 1) {
+        setReady(true);
+        return;
+      }
+      setRestoring(true);
+      post({ step: usable.step }, (d) => StepViewSchema.parse(d))
+        .then((restored) => {
+          setViews((v) => ({ ...v, [usable.step]: restored }));
+          setCurrent(usable.step);
+        })
+        .catch(() => {
+          /* could not restore: the student simply starts at step 1 */
+        })
+        .finally(() => {
+          setRestoring(false);
+          setReady(true);
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist, scenarioId, initialView.totalSteps]);
+
+  // If this step's question was answered before (a saved answer), show its review again.
+  useEffect(() => {
+    if (!persist || !ready || !questionId) return;
+    const choice = choices[questionId];
+    if (!choice || answers[questionId]) return;
+    let cancelled = false;
+    post({ step: current, answer: choice }, (d) => PredictionRevealSchema.parse(d))
+      .then((r) => {
+        if (!cancelled) setAnswers((a) => ({ ...a, [questionId]: r }));
+      })
+      .catch(() => {
+        /* the question can simply be asked again */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persist, ready, questionId, current, choices, answers]);
+
+  // Save the place (ids and numbers only). Not before the saved place has been read, and not
+  // until the student has done something.
+  useEffect(() => {
+    if (!persist || !ready || !touched) return;
+    if (current === 1 && Object.keys(choices).length === 0) {
+      removeScenarioProgress(scenarioId);
+    } else {
+      saveScenarioProgress(scenarioId, { step: current, total, answers: choices });
+    }
+  }, [persist, ready, touched, scenarioId, current, total, choices]);
+
+  // "Clear My Progress" anywhere in the app resets this scenario on screen too.
+  useEffect(() => {
+    if (!persist) return;
+    const reset = () => {
+      setCurrent(1);
+      setAnswers({});
+      setChoices({});
+      setAsking(false);
+      setNudge(false);
+      setError(null);
+      setPredictionError(null);
+    };
+    window.addEventListener(PROGRESS_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PROGRESS_CLEARED_EVENT, reset);
+  }, [persist]);
 
   function goNext() {
     if (atEnd || loading) return;
@@ -248,14 +372,10 @@ export default function ScenarioLens({
     setSubmitting(true);
     setPredictionError(null);
     try {
-      const res = await fetch("/api/belief-tracking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioId, step: current, answer: choice }),
-      });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      const parsed = PredictionRevealSchema.parse(await res.json());
+      const parsed = await post({ step: current, answer: choice }, (d) => PredictionRevealSchema.parse(d));
       setAnswers((a) => ({ ...a, [question.id]: parsed }));
+      setChoices((c) => ({ ...c, [question.id]: choice }));
+      setTouched(true);
       setNudge(false);
     } catch {
       setPredictionError("We couldn't check that just now. Please try again.");
@@ -264,42 +384,34 @@ export default function ScenarioLens({
     }
   }
 
-  async function advance() {
-    if (atEnd || loading) return;
-    const next = current + 1;
-    setError(null);
-    setAsking(false);
-    setNudge(false);
-    if (views[next]) {
-      setCurrent(next);
-      return;
-    }
+  async function goTo(n: number, failure: string) {
     setLoading(true);
     try {
-      const res = await fetch("/api/belief-tracking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenarioId, step: next }),
-      });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      const parsed = StepViewSchema.parse(await res.json());
-      setViews((v) => ({ ...v, [next]: parsed }));
-      setCurrent(next);
+      await loadView(n);
+      setCurrent(n);
+      setTouched(true);
     } catch {
-      setError("We couldn't load the next step. Please try again.");
+      setError(failure);
     } finally {
       setLoading(false);
     }
   }
 
-  function goPrevious() {
-    if (current > 1 && !loading) {
-      setError(null);
-      setAsking(false);
-      setNudge(false);
-      setPredictionError(null);
-      setCurrent(current - 1);
-    }
+  async function advance() {
+    if (atEnd || loading) return;
+    setError(null);
+    setAsking(false);
+    setNudge(false);
+    await goTo(current + 1, "We couldn't load the next step. Please try again.");
+  }
+
+  async function goPrevious() {
+    if (current <= 1 || loading) return;
+    setError(null);
+    setAsking(false);
+    setNudge(false);
+    setPredictionError(null);
+    await goTo(current - 1, "We couldn't load the previous step. Please try again.");
   }
 
   const quiet = view.characters.every((c) => c.participation === "none");
@@ -322,6 +434,12 @@ export default function ScenarioLens({
         character has seen or been told. Only what has happened so far is shown.
       </p>
       <Legend />
+
+      {restoring && (
+        <p role="status" className="mt-4 text-slate-700 dark:text-slate-300">
+          Picking up where you left off…
+        </p>
+      )}
 
       <div className="mt-6">
         <div className="flex items-baseline justify-between">
@@ -355,6 +473,10 @@ export default function ScenarioLens({
             Step {view.currentStep.number}
           </p>
           <p className="mt-1 text-xl leading-relaxed">{view.currentStep.text}</p>
+        </div>
+
+        <div className="mt-3">
+          <ReadAloud text={describeStepView(view)} what="this step and what each character believes" />
         </div>
 
         {view.earlierSteps.length > 0 && (
@@ -459,6 +581,8 @@ export default function ScenarioLens({
                 setNudge(false);
                 setPredictionError(null);
                 setAnswers({}); // start fresh, including the predictions
+                setChoices({});
+                setTouched(true);
                 setCurrent(1);
               }}
               className={`${btn} border border-slate-400 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700`}

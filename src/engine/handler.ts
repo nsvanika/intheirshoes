@@ -122,9 +122,10 @@ export async function handleBeliefRequest(request: Request, env: HandlerEnv): Pr
     if (!allowRequest(ip)) return json({ error: "Too many requests. Try again shortly." }, 429);
 
     return json(validated(await trackBeliefsWithModel(story, caller)));
-  } catch (err) {
-    // Log the reason server-side; never echo internals (or anything key-related) to the client.
-    console.error("belief-tracking failed:", err instanceof Error ? err.message : "unknown error");
+  } catch {
+    // Log a fixed phrase only: error text can include parts of a request, and nothing a person
+    // submitted should reach a log. Nothing internal (or key-related) is echoed to the client either.
+    console.error("belief-tracking failed");
     return json({ error: "Could not produce a belief table." }, 502);
   }
 }

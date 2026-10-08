@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ProgressBadge from "@/components/ProgressBadge";
 import { scenarios } from "@/data/scenarios";
 
 export default function Home() {
@@ -44,6 +45,7 @@ export default function Home() {
               <span className="mt-1 text-slate-700 dark:text-slate-300">
                 {scenario.description}
               </span>
+              <ProgressBadge scenarioId={scenario.id} />
             </Link>
           </li>
         ))}

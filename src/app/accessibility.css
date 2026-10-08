@@ -1,0 +1,167 @@
+/*
+ * Display settings from the accessibility panel. Each is switched on by an attribute on <html>
+ * (data-large, data-font, data-contrast), set from the person's saved choice before the page
+ * paints (see src/lib/settings.ts), so every page and component follows it.
+ */
+
+/* ---- Large text ----------------------------------------------------------------------------
+ * Everything is sized in rem, so scaling the root size scales text, buttons, spacing and labels
+ * together across the whole site. */
+html[data-large="true"] {
+  font-size: 125%;
+}
+
+/* ---- Reading-friendly font -----------------------------------------------------------------
+ * OpenDyslexic is bundled (see layout.tsx) and only downloaded when this is on. The fallbacks
+ * are common, readable system fonts. */
+html[data-font="reading"] body {
+  font-family: var(--font-reading), Verdana, "Trebuchet MS", system-ui, sans-serif;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  word-spacing: 0.08em;
+}
+
+/* ---- High contrast -------------------------------------------------------------------------
+ * The app's colours are Tailwind theme variables, so remapping the palette restyles everything
+ * at once. Shades 800 and darker become black, 100 and lighter become white, and the middle
+ * shades (used for borders and muted text) become the "ink" colour of the current polarity:
+ * black on white for light mode, white on black for dark mode. */
+html[data-contrast="high"] {
+  color-scheme: light;
+  --background: #fff;
+  --foreground: #000;
+  --hc-ink: #000;
+  --hc-paper: #fff;
+
+  --color-slate-50: #fff;
+  --color-slate-100: #fff;
+  --color-slate-200: #fff;
+  --color-slate-300: #000;
+  --color-slate-400: #000;
+  --color-slate-500: #000;
+  --color-slate-600: #000;
+  --color-slate-700: #000;
+  --color-slate-800: #000;
+  --color-slate-900: #000;
+  --color-slate-950: #000;
+
+  --color-teal-50: #fff;
+  --color-teal-300: #000;
+  --color-teal-400: #000;
+  --color-teal-600: #000;
+  --color-teal-700: #000;
+  --color-teal-800: #000;
+  --color-teal-950: #000;
+
+  --color-sky-50: #fff;
+  --color-sky-300: #000;
+  --color-sky-400: #000;
+  --color-sky-600: #000;
+  --color-sky-700: #000;
+  --color-sky-950: #000;
+
+  --color-amber-50: #fff;
+  --color-amber-400: #000;
+  --color-amber-500: #000;
+  --color-amber-600: #000;
+  --color-amber-950: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-contrast="high"] {
+    color-scheme: dark;
+    --background: #000;
+    --foreground: #fff;
+    --hc-ink: #fff;
+    --hc-paper: #000;
+
+    --color-slate-50: #fff;
+    --color-slate-100: #fff;
+    --color-slate-200: #fff;
+    --color-slate-300: #fff;
+    --color-slate-400: #fff;
+    --color-slate-500: #fff;
+    --color-slate-600: #fff;
+    --color-slate-700: #fff;
+    --color-slate-800: #000;
+    --color-slate-900: #000;
+    --color-slate-950: #000;
+
+    --color-teal-50: #fff;
+    --color-teal-300: #fff;
+    --color-teal-400: #fff;
+    --color-teal-600: #fff;
+    --color-teal-700: #fff;
+    --color-teal-800: #000;
+    --color-teal-950: #000;
+
+    --color-sky-50: #fff;
+    --color-sky-300: #fff;
+    --color-sky-400: #fff;
+    --color-sky-600: #fff;
+    --color-sky-700: #fff;
+    --color-sky-950: #000;
+
+    --color-amber-50: #fff;
+    --color-amber-400: #fff;
+    --color-amber-500: #fff;
+    --color-amber-600: #fff;
+    --color-amber-950: #000;
+  }
+}
+
+/* Never rely on colour alone: whether a belief matches reality is also shown by the border
+ * style (solid, dashed or dotted) as well as by the words and symbols in each label. */
+html[data-contrast="high"] [data-status="matches"] {
+  border-style: solid;
+  border-width: 2px;
+}
+
+html[data-contrast="high"] [data-status="differs"] {
+  border-style: dashed;
+  border-width: 4px;
+}
+
+html[data-contrast="high"] [data-status="unknown"] {
+  border-style: dotted;
+  border-width: 4px;
+}
+
+/* Dividers, form fields and the progress bar keep strong outlines. */
+html[data-contrast="high"] :is(header, footer) {
+  border-color: var(--hc-ink);
+}
+
+html[data-contrast="high"] :is(input:not([type="checkbox"], [type="radio"]), textarea, select) {
+  border-width: 2px;
+  border-color: var(--hc-ink);
+}
+
+html[data-contrast="high"] [role="progressbar"] {
+  background-color: var(--hc-paper);
+  border: 2px solid var(--hc-ink);
+}
+
+/* Links are always underlined (except whole-card links, which have their own border). */
+html[data-contrast="high"] a:not(.flex) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Buttons invert on hover, which is clearer than a subtle colour change. */
+html[data-contrast="high"] button:hover:not(:disabled) {
+  background-color: var(--hc-ink);
+  color: var(--hc-paper);
+}
+
+html[data-contrast="high"] button:disabled {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+/* A thick two-tone focus ring that is visible on both light and dark parts of the page. */
+html[data-contrast="high"] :focus-visible {
+  outline: 4px solid var(--hc-ink);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 7px var(--hc-paper);
+}

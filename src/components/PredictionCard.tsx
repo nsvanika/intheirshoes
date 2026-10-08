@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import ReadAloud from "@/components/ReadAloud";
+import { describePrompt, describeReveal } from "@/lib/speech-text";
 import type { ChoiceId, PredictionPrompt, PredictionReveal } from "@/engine/prediction-schema";
 
 /**
@@ -10,7 +12,7 @@ import type { ChoiceId, PredictionPrompt, PredictionReveal } from "@/engine/pred
  */
 
 const TAG =
-  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap";
+  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium max-w-full";
 
 export default function PredictionCard({
   prompt,
@@ -67,6 +69,13 @@ export default function PredictionCard({
       >
         {interpretation ? "A question about feelings" : "Predict before you read on"}
       </h2>
+
+      <div className="mt-2">
+        <ReadAloud
+          text={reveal ? describeReveal(prompt, reveal) : describePrompt(prompt)}
+          what={reveal ? "the explanation" : "the question and choices"}
+        />
+      </div>
 
       {interpretation ? (
         <p className="mt-2 rounded-lg border border-sky-600 bg-white p-3 text-slate-900 dark:border-sky-400 dark:bg-slate-900 dark:text-slate-100">
