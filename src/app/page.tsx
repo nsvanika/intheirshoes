@@ -12,6 +12,21 @@ export default function Home() {
         think about what each person knew, felt, and expected.
       </p>
 
+      <div className="mt-6 rounded-xl border-2 border-teal-700 bg-teal-50/60 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4 dark:border-teal-400 dark:bg-teal-950/30">
+        <div>
+          <h2 className="text-xl font-semibold">Make Your Own</h2>
+          <p className="mt-1 text-slate-800 dark:text-slate-200">
+            Describe a situation with made-up people and explore what each one knows, step by step.
+          </p>
+        </div>
+        <Link
+          href="/make-your-own"
+          className="mt-3 inline-flex min-h-12 items-center rounded-lg bg-teal-700 px-5 py-2 text-base font-semibold text-white hover:bg-teal-800 sm:mt-0 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+        >
+          Make Your Own
+        </Link>
+      </div>
+
       <h2 className="mt-10 text-xl font-semibold">Choose a scenario</h2>
       <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenarios.map((scenario) => (

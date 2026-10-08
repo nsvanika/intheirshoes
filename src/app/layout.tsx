@@ -32,13 +32,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to main content
         </a>
         <header className="border-b border-slate-200 dark:border-slate-800">
-          <div className="mx-auto flex w-full max-w-5xl items-center px-4 py-4 sm:px-6">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <Link
               href="/"
               className="rounded-md text-xl font-semibold tracking-tight"
             >
               InTheirShoes
             </Link>
+            <nav aria-label="Main">
+              <Link
+                href="/make-your-own"
+                className="rounded-md text-teal-800 underline underline-offset-4 dark:text-teal-300"
+              >
+                Make Your Own
+              </Link>
+            </nav>
           </div>
         </header>
         <div id="main" tabIndex={-1} className="flex-1 outline-none">

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { Scenario } from "@/data/scenarios";
 import { PredictionPromptSchema, type PredictionPrompt } from "./prediction-schema";
 import type { BeliefStory, BeliefTable } from "./schema";
 
@@ -72,6 +71,12 @@ export const StepViewSchema = z.strictObject({
 
 export type StepView = z.infer<typeof StepViewSchema>;
 
+/** The story text a view needs. Built-in scenarios and user-made ones both fit this. */
+export interface StoryText {
+  title: string;
+  steps: { text: string }[];
+}
+
 /**
  * Propositions a student may see at step n (1-based):
  *  1. any proposition an event up to step n states or changes,
@@ -110,7 +115,7 @@ export function visiblePropositionIds(
 export function buildStepView(
   story: BeliefStory,
   table: BeliefTable,
-  scenario: Scenario,
+  scenario: StoryText,
   n: number,
   prediction: PredictionPrompt | null = null,
 ): StepView {
@@ -128,6 +133,15 @@ export function buildStepView(
 
   const worldChanged = (id: string) => step.world[id] !== previous.world[id];
   const event = story.events[n - 1];
+  // What each person has said so far. A speaker plainly has the information they conveyed, so it
+  // is not listed as something they do not have. (The engine does not turn saying into believing.)
+  const spokenBy = new Map<string, Set<string>>();
+  for (const e of story.events.slice(0, n)) {
+    if (e.type !== "communication" || !e.speaker) continue;
+    const set = spokenBy.get(e.speaker) ?? new Set<string>();
+    for (const a of e.assertions) set.add(a.proposition);
+    spokenBy.set(e.speaker, set);
+  }
 
   const truths = ordered
     .filter((id) => step.world[id] === 1)
@@ -156,7 +170,9 @@ export function buildStepView(
           status: step.world[id] === 1 ? ("matches" as const) : ("differs" as const),
         })),
       notKnown: ordered
-        .filter((id) => now.beliefs[id] === 0 && step.world[id] === 1)
+        .filter(
+          (id) => now.beliefs[id] === 0 && step.world[id] === 1 && !spokenBy.get(actor.id)?.has(id),
+        )
         .map((id) => ({
           id,
           text: text(id),

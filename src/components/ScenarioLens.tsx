@@ -196,13 +196,24 @@ function CharacterPanel({ character }: { character: StepView["characters"][numbe
 export default function ScenarioLens({
   scenarioId,
   initialView,
+  preloadedViews,
+  endAction,
 }: {
   scenarioId: string;
   initialView: StepView;
+  /**
+   * Every step, already built (used by "Make Your Own", where the student wrote the story and
+   * the server keeps nothing). When given, no step is ever requested from the server.
+   */
+  preloadedViews?: StepView[];
+  /** Replaces the "Choose another scenario" link in the end-of-story card. */
+  endAction?: { label: string; onClick: () => void };
 }) {
-  const [views, setViews] = useState<Record<number, StepView>>({
-    [initialView.stepNumber]: initialView,
-  });
+  const [views, setViews] = useState<Record<number, StepView>>(
+    preloadedViews
+      ? Object.fromEntries(preloadedViews.map((v) => [v.stepNumber, v]))
+      : { [initialView.stepNumber]: initialView },
+  );
   const [current, setCurrent] = useState(initialView.stepNumber);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -454,12 +465,22 @@ export default function ScenarioLens({
             >
               Start over
             </button>
-            <Link
-              href="/"
-              className={`${btn} inline-flex items-center border border-slate-400 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700`}
-            >
-              Choose another scenario
-            </Link>
+            {endAction ? (
+              <button
+                type="button"
+                onClick={endAction.onClick}
+                className={`${btn} border border-slate-400 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700`}
+              >
+                {endAction.label}
+              </button>
+            ) : (
+              <Link
+                href="/"
+                className={`${btn} inline-flex items-center border border-slate-400 bg-white text-slate-900 hover:bg-slate-100 dark:border-slate-500 dark:bg-slate-800 dark:text-slate-50 dark:hover:bg-slate-700`}
+              >
+                Choose another scenario
+              </Link>
+            )}
           </p>
         </div>
       )}
