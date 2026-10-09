@@ -49,6 +49,19 @@ describe("About the Science: before any live run, it shows no results", () => {
     expect(t).not.toContain("Live run.");
   });
 
+  it("labels the free scoring demonstration as NOT an AI evaluation, with no accuracy figure and no winner", async () => {
+    mocked.value = null;
+    const t = text(await page());
+    expect(t).toContain("Demonstration: how a reply is scored (not an AI evaluation)");
+    expect(t).toMatch(/made-up replies, not an AI.s\s+answers/);
+    expect(t).toMatch(/makes no claim that either method is better/);
+    expect(t).not.toMatch(/service key|costs about a cent/i);
+    const { scoringExamples } = await import("./demo");
+    const ex = scoringExamples();
+    expect(ex.map((x) => x.outcome)).toEqual(["correct", "wrong", "unparseable", "correct", "incomplete_table"]);
+    expect(ex.map((x) => x.counted)).toEqual(["correct", "not correct", "not correct", "correct", "not correct"]);
+  });
+
   it("still explains the science: the idea, the paper's real findings, the test design and its limits", async () => {
     mocked.value = null;
     const t = text(await page());

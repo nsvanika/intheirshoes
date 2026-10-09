@@ -24,7 +24,7 @@ function identify(user: string): { c: BenchmarkCase; method: "A" | "B" } {
 }
 
 /** A table with every required row, from a rule: gold beliefs, or the world state copied, or random. */
-function tableFor(c: BenchmarkCase, belief: (t: number, characterId: string, propId: string, goldBelief: 0 | 1) => 0 | 1) {
+export function tableFor(c: BenchmarkCase, belief: (t: number, characterId: string, propId: string, goldBelief: 0 | 1) => 0 | 1) {
   const table = trackBeliefs(c.structured);
   const rows: { t: number; character: string; statement: string; belief: 0 | 1 }[] = [];
   for (const step of table.steps.slice(1)) {

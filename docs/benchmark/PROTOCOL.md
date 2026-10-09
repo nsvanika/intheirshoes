@@ -129,4 +129,12 @@ A live run costs a few cents with the default model. `--publish` copies the resu
 
 ## Deviations
 
-None so far.
+None to the benchmark, scoring, prompts or analysis rules.
+
+## Status (2026-10-08)
+
+The owner has decided not to spend money on API calls, so **no live run has been made** and the protocol is
+unexecuted. The About the Science page shows no results and makes no claim that either method is better. It
+shows a free scoring demonstration with hand-written stand-in replies, clearly labelled as not an AI evaluation.
+The live-run command above remains available for anyone with access to a model; nothing in this repository
+runs it automatically.

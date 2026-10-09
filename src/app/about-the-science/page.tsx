@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { benchmarkCases, getCase } from "@/benchmark/build";
+import { scoringExamples } from "@/benchmark/demo";
 import { loadLiveResults } from "@/benchmark/load-results";
 import { DEFAULT_SETTINGS } from "@/benchmark/runner";
 import { baselineAccuracies, type MethodSummary } from "@/benchmark/summarize";
@@ -276,18 +277,38 @@ export default function AboutTheSciencePage() {
           )}
         </>
       ) : (
-        <div className={CALLOUT} role="note">
-          <p className="font-semibold">No live comparison has been run yet, so there are no results to show.</p>
-          <p className="mt-2">
-            The test, the two methods, the scoring and the statistics are all built and checked. What is missing is the
-            run itself, which needs an AI service key that only the project owner holds. We would rather show an empty
-            space than a made-up number. When the run is done and published, the results table will appear here
-            automatically, whatever it shows.
+        <>
+          <div className={CALLOUT} role="note">
+            <p className="font-semibold">No live comparison has been run yet, so there are no results to show.</p>
+            <p className="mt-2">
+              This project uses no paid AI service, so it has not tested a real AI model, and{" "}
+              <strong>it makes no claim that either method is better</strong>. The test, the two methods, the scoring and
+              the statistics are built and checked, and are ready to run if someone with access to a model chooses to. We
+              would rather show an empty space than a made-up number.
+            </p>
+          </div>
+          <h4 className="mt-6 text-lg font-semibold">Demonstration: how a reply is scored (not an AI evaluation)</h4>
+          <p className={P}>
+            To show the scoring working without any AI, we wrote a few <strong>stand-in replies by hand</strong> to the
+            Sally&ndash;Anne question and ran them through the real scorer. These are made-up replies, not an AI&rsquo;s
+            answers, so this table says nothing about how well any AI does.
           </p>
-          <p className="mt-2">
-            Running it costs about a cent. The steps are in <code>docs/benchmark/PROTOCOL.md</code>.
+          <Table
+            caption="Hand-written stand-in replies and how the scorer counts them (a demonstration, not results)"
+            head={["Stand-in reply", "Method", "Scorer's verdict", "Counted as"]}
+            rows={scoringExamples().map((x) => [
+              x.reply,
+              x.method,
+              x.outcome === "correct" ? "correct" : x.outcome.replace(/_/g, " "),
+              x.counted,
+            ])}
+          />
+          <p className={P}>
+            The same scorer also ran over the whole 26-question test with scripted stand-ins during development,
+            including some that deliberately fail in every way listed above, to check that every kind of failure is
+            counted and none is hidden. Those rehearsal runs are kept out of the website on purpose.
           </p>
-        </div>
+        </>
       )}
 
       <h3 className={H3}>What simple rules score on these same questions</h3>
