@@ -62,12 +62,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <Link href="/" className="mr-auto rounded-md text-xl font-semibold tracking-tight">
               InTheirShoes
             </Link>
-            <nav aria-label="Main">
+            <nav aria-label="Main" className="flex flex-wrap items-center gap-x-5 gap-y-2">
               <Link
                 href="/make-your-own"
                 className="rounded-md text-teal-800 underline underline-offset-4 dark:text-teal-300"
               >
                 Make Your Own
+              </Link>
+              <Link
+                href="/about-the-science"
+                className="rounded-md text-teal-800 underline underline-offset-4 dark:text-teal-300"
+              >
+                About the Science
               </Link>
             </nav>
             <AccessibilitySettings />
@@ -85,7 +91,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               example.
             </p>
             <p>InTheirShoes is a practice tool, not therapy or diagnosis.</p>
-            <nav aria-label="Footer">
+            <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-2">
+              <Link
+                href="/about-the-science"
+                className="rounded-md text-teal-800 underline underline-offset-4 dark:text-teal-300"
+              >
+                About the Science
+              </Link>
               <Link
                 href="/privacy"
                 className="rounded-md text-teal-800 underline underline-offset-4 dark:text-teal-300"

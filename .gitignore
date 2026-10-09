@@ -45,3 +45,6 @@ next-env.d.ts
 
 # research paper stays local
 /docs/*.pdf
+
+# scripted dry runs are pipeline rehearsals, never results
+docs/benchmark/dry-run-*.json
