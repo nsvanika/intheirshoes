@@ -218,7 +218,7 @@ describe("the protocol was written first and matches the benchmark", () => {
     expect(protocol).toMatch(/hidden reasoning/i);
     expect(protocol).toContain("8,000 tokens");
     expect(protocol).toMatch(/not.*independent human audit|Not independently human-audited/i);
-    expect(protocol).toMatch(/## Deviations\s+None so far\./);
+    expect(protocol).toMatch(/## Deviations\s+None to the benchmark, scoring, prompts or analysis rules\./);
   });
 
   it("its numbers are the benchmark's numbers", () => {
